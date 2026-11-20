@@ -87,7 +87,7 @@ JBINDING_JNIEXPORT void JNICALL Java_net_sf_sevenzipjbinding_impl_OutArchiveImpl
  * Method:    nativeSetProperties
  * Signature: (IIILjava/lang/String;Z)V
  */
-JNIEXPORT void JNICALL Java_net_sf_sevenzipjbinding_impl_OutArchiveImpl_nativeSetProperties
+JBINDING_JNIEXPORT void JNICALL Java_net_sf_sevenzipjbinding_impl_OutArchiveImpl_nativeSetProperties
   (JNIEnv * env, jobject thiz, jint compressionLevel, jint headerEncryption, jint threadCount,
    jstring solidSpec, jboolean solidSpecDefined) {
     TRACE("OutArchiveImpl::nativeSetProperties(). ThreadID=" << PlatformGetCurrentThreadId());
@@ -171,7 +171,7 @@ JNIEXPORT void JNICALL Java_net_sf_sevenzipjbinding_impl_OutArchiveImpl_nativeSe
  * Method:    nativeClose
  * Signature: ()V
  */
-JNIEXPORT void JNICALL Java_net_sf_sevenzipjbinding_impl_OutArchiveImpl_nativeClose
+JBINDING_JNIEXPORT void JNICALL Java_net_sf_sevenzipjbinding_impl_OutArchiveImpl_nativeClose
   (JNIEnv * env, jobject thiz) {
 
     TRACE("InArchiveImpl::nativeClose(). ThreadID=" << PlatformGetCurrentThreadId());
