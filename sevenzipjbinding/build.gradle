@@ -3,6 +3,8 @@ plugins {
     id 'maven-publish'
 }
 
+group = 'io.github.wirelessalien'
+
 android {
     namespace 'net.sf.sevenzipjbinding'
     compileSdk 36
@@ -63,7 +65,7 @@ android {
 publishing {
     publications {
         release(MavenPublication) {
-            groupId = 'net.sf.sevenzipjbinding'
+            groupId = 'io.github.wirelessalien'
             artifactId = 'sevenzipjbinding-android'
             version = '26.06-2.3'
 
