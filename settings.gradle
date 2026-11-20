@@ -1,0 +1,3 @@
+rootProject.name = "7-Zip-JBinding-Android"
+include ':sevenzipjbinding'
+include ':android-test-app'

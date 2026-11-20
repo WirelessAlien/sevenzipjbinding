@@ -5,6 +5,7 @@
 *.jar
 # test-time dependencies are checked in
 !test/JavaTests/lib/*.jar
+!gradle/wrapper/gradle-wrapper.jar
 jbinding-java/bin
 test/JavaTests/bin
 .svn
@@ -40,4 +41,16 @@ Session.vim
 /compile_commands.json
 /.cache/
 /.clangd/
+
+# Android & Gradle
+.gradle/
+build/
+**/build/
+.cxx/
+**/.cxx/
+local.properties
+*.aar
+.idea/
+*.iml
+
 

@@ -1,5 +1,6 @@
 package net.sf.sevenzipjbinding;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -269,6 +270,16 @@ public class SevenZip {
     }
 
     /**
+     * Determine if current runtime is Android environment.
+     *
+     * @return <code>true</code> if Android, <code>false</code> otherwise
+     */
+    public static boolean isAndroid() {
+        return "The Android Project".equalsIgnoreCase(System.getProperty("java.vm.vendor"))
+                || System.getProperty("java.vendor", "").toLowerCase().contains("android");
+    }
+
+    /**
      * Load list of the available platforms out of <code>sevenzipjbinding-<i>Platform</i>.jar</code> on the class path.
      *
      * @return list of the available platforms
@@ -281,8 +292,13 @@ public class SevenZip {
             return availablePlatforms;
         }
 
-        InputStream propertiesInputStream = SevenZip.class
-                .getResourceAsStream(SEVENZIPJBINDING_PLATFORMS_PROPRETIES_FILENAME);
+        InputStream propertiesInputStream;
+        if (isAndroid()) {
+            propertiesInputStream = new ByteArrayInputStream("platform.1=Android\n".getBytes());
+        } else {
+            propertiesInputStream = SevenZip.class
+                    .getResourceAsStream(SEVENZIPJBINDING_PLATFORMS_PROPRETIES_FILENAME);
+        }
         if (propertiesInputStream == null) {
             throw new SevenZipNativeInitializationException("Can not find 7-Zip-JBinding platform property file "
                     + SEVENZIPJBINDING_PLATFORMS_PROPRETIES_FILENAME
@@ -449,6 +465,16 @@ public class SevenZip {
             if (initializationSuccessful) {
                 // Native library was already initialized successfully. No need for further initialization.
                 return;
+            }
+
+            if (isAndroid()) {
+                try {
+                    System.loadLibrary("7-Zip-JBinding");
+                    nativeInitialization();
+                    return;
+                } catch (Throwable t) {
+                    throw new SevenZipNativeInitializationException("Failed to load native library on Android", t);
+                }
             }
 
             determineAndSetUsedPlatform(platform);
@@ -684,7 +710,7 @@ public class SevenZip {
         String doPrivileged = System.getProperty(SYSTEM_PROPERTY_SEVEN_ZIP_NO_DO_PRIVILEGED_INITIALIZATION);
         final String errorMessage[] = new String[1];
         final Throwable throwable[] = new Throwable[1];
-        if (doPrivileged == null || doPrivileged.trim().equals("0")) {
+        if (!isAndroid() && (doPrivileged == null || doPrivileged.trim().equals("0"))) {
             AccessController.doPrivileged(new PrivilegedAction<Void>() {
                 public Void run() {
                     try {
@@ -696,7 +722,11 @@ public class SevenZip {
                 }
             });
         } else {
-            errorMessage[0] = nativeInitSevenZipLibrary();
+            try {
+                errorMessage[0] = nativeInitSevenZipLibrary();
+            } catch (Throwable e) {
+                throwable[0] = e;
+            }
         }
         if (errorMessage[0] != null || throwable[0] != null) {
             String message = errorMessage[0];
@@ -814,13 +844,17 @@ public class SevenZip {
                 initSevenZipFromPlatformJAR();
             } catch (SevenZipNativeInitializationException exception) {
                 lastInitializationException = exception;
-                throw new RuntimeException(
-                        "SevenZipJBinding couldn't be initialized automaticly using initialization "
-                                + "from platform depended JAR and the default temporary directory. Please, "
-                                + "make sure the correct 'sevenzipjbinding-<Platform>.jar' file is "
-                                + "on the class path or consider initializing SevenZipJBinding manualy using one of "
-                                + "the offered initialization methods: 'net.sf.sevenzipjbinding.SevenZip.init*()'",
-                        exception);
+                if (isAndroid()) {
+                    throw new RuntimeException("SevenZipJBinding couldn't be initialized on Android", exception);
+                } else {
+                    throw new RuntimeException(
+                            "SevenZipJBinding couldn't be initialized automaticly using initialization "
+                                    + "from platform depended JAR and the default temporary directory. Please, "
+                                    + "make sure the correct 'sevenzipjbinding-<Platform>.jar' file is "
+                                    + "on the class path or consider initializing SevenZipJBinding manualy using one of "
+                                    + "the offered initialization methods: 'net.sf.sevenzipjbinding.SevenZip.init*()'",
+                            exception);
+                }
             }
         }
         if (!initializationSuccessful) {
