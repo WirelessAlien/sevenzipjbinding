@@ -66,12 +66,22 @@ extern "C"
 #include "Windows/System.h"
 */
 
+#if defined(ANDROID) || defined(__ANDROID__)
+#include <android/log.h>
+#endif
+
 /**
  * Fatal error
  */
 void fatal(const char * fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
+#if defined(ANDROID) || defined(__ANDROID__)
+	va_list args_copy;
+	va_copy(args_copy, args);
+	__android_log_vprint(ANDROID_LOG_FATAL, "7-Zip-JBinding", fmt, args_copy);
+	va_end(args_copy);
+#endif
 	fputs("FATAL ERROR: ", stdout);
 	vprintf(fmt, args);
 	va_end(args);
@@ -83,9 +93,13 @@ void fatal(const char * fmt, ...) {
 
 	// exit(-1);
 
+#if defined(ANDROID) || defined(__ANDROID__)
+	abort();
+#else
 	printf("Crash jvm to get a stack trace\n");
 	fflush(stdout);
 	int * i = NULL;
 	*i = 0;
+#endif
 }
 

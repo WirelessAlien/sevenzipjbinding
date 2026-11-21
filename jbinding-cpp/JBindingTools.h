@@ -16,6 +16,8 @@
 
 #define NO_HRESULT -1
 
+#include "AndroidFindClass.h"
+
 class JNINativeCallContext;
 class JBindingSession;
 class JNIEnvInstance;
@@ -160,6 +162,14 @@ private:
     }
 
 public:
+    static void setJavaVM(JavaVM * vm) {
+        _vm = vm;
+    }
+
+    static JavaVM * getJavaVM() {
+        return _vm;
+    }
+
     JBindingSession(JNIEnv * initEnv) {
         if (!_vm && initEnv->GetJavaVM(&_vm)) {
             fatal("Can't get JavaVM from JNIEnv");

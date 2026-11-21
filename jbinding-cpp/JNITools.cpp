@@ -8,6 +8,7 @@
 
 // TODO Synchronize access to this variable or call the init method from the global initialization routing (better)
 static bool initialized = 0;
+static PlatformCriticalSection g_jniToolsInitCriticalSection;
 
 //static jclass g_NumberClass;
 
@@ -31,8 +32,14 @@ static jclass g_StringClass;
 static jclass g_DateClass;
 static jmethodID g_DateConstructor;
 
-static void localinit(JNIEnv * env) {
+void JNITools_init(JNIEnv * env) {
     if (initialized) {
+        return;
+    }
+
+    g_jniToolsInitCriticalSection.Enter();
+    if (initialized) {
+        g_jniToolsInitCriticalSection.Leave();
         return;
     }
 
@@ -58,7 +65,7 @@ static void localinit(JNIEnv * env) {
     g_LongValueOf = env->GetStaticMethodID(g_LongClass, "valueOf", "(J)L" JAVA_LONG ";");
     FATALIF(g_LongValueOf == NULL, "Can't find Long.valueOf() method");
 
-    g_LongLongValue = env->GetMethodID(g_IntegerClass, "longValue", "()J");
+    g_LongLongValue = env->GetMethodID(g_LongClass, "longValue", "()J");
     FATALIF(g_LongLongValue == NULL, "Can't find Long.longValue() method");
 
     // class: Double
@@ -91,6 +98,11 @@ static void localinit(JNIEnv * env) {
     FATALIF(g_DateConstructor == NULL, "Can't find constructor java.util.Date(long)");
 
     initialized = 1;
+    g_jniToolsInitCriticalSection.Leave();
+}
+
+static void localinit(JNIEnv * env) {
+    JNITools_init(env);
 }
 
 /**

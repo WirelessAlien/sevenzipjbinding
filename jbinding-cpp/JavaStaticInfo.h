@@ -44,6 +44,8 @@
 // TODO Remove from here
 #define JBINDING_JNIEXPORT extern "C" JNIEXPORT
 
+#include "AndroidFindClass.h"
+
 // -----------------------------
 // -- General purpose defines --
 // -----------------------------
@@ -691,6 +693,11 @@ private:
     void init(JNIEnv * env) {
         TRACE ("env->FindClass() for " << T::getName())
         jclass clazz = env->FindClass(T::getName());
+#if defined(ANDROID) || defined(__ANDROID__)
+        if (clazz == nullptr) {
+            clazz = findClass(env, T::getName());
+        }
+#endif
         FATALIF1(!clazz, "Error finding class '%s'", T::getName())
         _jclass = static_cast<jclass> (env->NewGlobalRef(clazz));
         env->DeleteLocalRef(clazz);
@@ -767,10 +774,19 @@ public:
     }
     static jclass _getClassObject(JNIEnv * env) {
         if (_classObject == NULL) {
-            jclass objectClass = env->FindClass(T::_getName());
-            FATALIF1(!objectClass, "Error finding class '%s'", T::_getName());
-            _classObject = (jclass) env->NewGlobalRef(objectClass);
-            env->DeleteLocalRef(objectClass);
+            _criticalSection.Enter();
+            if (_classObject == NULL) {
+                jclass objectClass = env->FindClass(T::_getName());
+#if defined(ANDROID) || defined(__ANDROID__)
+                if (objectClass == nullptr) {
+                    objectClass = findClass(env, T::_getName());
+                }
+#endif
+                FATALIF1(!objectClass, "Error finding class '%s'", T::_getName());
+                _classObject = (jclass) env->NewGlobalRef(objectClass);
+                env->DeleteLocalRef(objectClass);
+            }
+            _criticalSection.Leave();
         }
         return _classObject;
     }

@@ -28,6 +28,11 @@ public:
 
     jclass cryptoGetTextPasswordClass =
         initEnv->FindClass(CRYPTOGETTEXTPASSWORD_CLASS);
+#if defined(ANDROID) || defined(__ANDROID__)
+    if (cryptoGetTextPasswordClass == nullptr) {
+        cryptoGetTextPasswordClass = findClass(initEnv, CRYPTOGETTEXTPASSWORD_CLASS);
+    }
+#endif
     FATALIF(cryptoGetTextPasswordClass == NULL,
             "Can't find class " CRYPTOGETTEXTPASSWORD_CLASS);
 

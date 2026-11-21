@@ -9,8 +9,125 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <string>
 
 #include "JBindingTools.h"
+#include "JNITools.h"
+
+#if defined(ANDROID) || defined(__ANDROID__)
+#include <android/log.h>
+#endif
+
+#if defined(ANDROID) || defined(__ANDROID__)
+static jobject g_classLoader = NULL;
+static jmethodID g_loadClassMethod = NULL;
+
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((visibility("default")))
+#endif
+jclass findClass(JNIEnv * env, const char * className) {
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+    }
+    if (!g_classLoader || !g_loadClassMethod) {
+        return NULL;
+    }
+    std::string dottedClassName = className;
+    if (dottedClassName.length() > 2 && dottedClassName[0] == 'L' && dottedClassName[dottedClassName.length() - 1] == ';') {
+        dottedClassName = dottedClassName.substr(1, dottedClassName.length() - 2);
+    }
+    for (size_t i = 0; i < dottedClassName.length(); ++i) {
+        if (dottedClassName[i] == '/') {
+            dottedClassName[i] = '.';
+        }
+    }
+    jstring classNameStr = env->NewStringUTF(dottedClassName.c_str());
+    if (!classNameStr) {
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+        }
+        return NULL;
+    }
+    jclass clazz = (jclass) env->CallObjectMethod(g_classLoader, g_loadClassMethod, classNameStr);
+    env->DeleteLocalRef(classNameStr);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        return NULL;
+    }
+    return clazz;
+}
+#endif
+
+extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM * vm, void * reserved) {
+    JBindingSession::setJavaVM(vm);
+
+    JNIEnv * env = NULL;
+    if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
+        return JNI_ERR;
+    }
+
+#if defined(ANDROID) || defined(__ANDROID__)
+    jclass bootstrapClass = env->FindClass("net/sf/sevenzipjbinding/SevenZip");
+    if (!bootstrapClass) {
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+        }
+        bootstrapClass = env->FindClass("net/sf/sevenzipjbinding/SevenZipException");
+    }
+    if (!bootstrapClass) {
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+        }
+        bootstrapClass = env->FindClass("net/sf/sevenzipjbinding/IInStream");
+    }
+
+    if (bootstrapClass) {
+        jclass classClass = env->GetObjectClass(bootstrapClass);
+        if (classClass) {
+            jmethodID getClassLoaderMethod = env->GetMethodID(classClass, "getClassLoader", "()Ljava/lang/ClassLoader;");
+            if (getClassLoaderMethod) {
+                jobject classLoader = env->CallObjectMethod(bootstrapClass, getClassLoaderMethod);
+                if (classLoader) {
+                    g_classLoader = env->NewGlobalRef(classLoader);
+                    env->DeleteLocalRef(classLoader);
+                }
+            }
+            env->DeleteLocalRef(classClass);
+        }
+        env->DeleteLocalRef(bootstrapClass);
+    }
+
+    if (g_classLoader) {
+        jclass classLoaderClass = env->FindClass("java/lang/ClassLoader");
+        if (classLoaderClass) {
+            g_loadClassMethod = env->GetMethodID(classLoaderClass, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
+            env->DeleteLocalRef(classLoaderClass);
+        }
+    }
+
+    if (!g_classLoader || !g_loadClassMethod) {
+        __android_log_print(ANDROID_LOG_WARN, "7-Zip-JBinding",
+            "JNI_OnLoad: Failed to cache ClassLoader or loadClass method. Subsequent findClass calls on native threads will fail.");
+    }
+#endif
+
+    JNITools_init(env);
+
+    return JNI_VERSION_1_6;
+}
+
+extern "C" JNIEXPORT void JNICALL JNI_OnUnload(JavaVM * vm, void * reserved) {
+#if defined(ANDROID) || defined(__ANDROID__)
+    JNIEnv * env = NULL;
+    if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) == JNI_OK) {
+        if (g_classLoader) {
+            env->DeleteGlobalRef(g_classLoader);
+            g_classLoader = NULL;
+        }
+    }
+    g_loadClassMethod = NULL;
+#endif
+}
 
 JT_BEGIN_CLASS("net/sf/sevenzipjbinding", SevenZipException)
 /*    */JT_CLASS_VIRTUAL_METHOD_OBJECT("Ljava/lang/Throwable;", initCause, JT_THROWABLE(cause,_))

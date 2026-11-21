@@ -22,6 +22,8 @@
 #include "JavaStaticInfo.h"
 #include "JBindingTools.h"
 
+void JNITools_init(JNIEnv * env);
+
 // TODO Check all methods here and remove not used
 
 /**
